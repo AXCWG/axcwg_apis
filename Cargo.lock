@@ -3,6 +3,15 @@
 version = 3
 
 [[package]]
+name = "AXCWG_API"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "rusqlite",
+ "serde",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -183,15 +192,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "actix_image_api"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "rusqlite",
- "serde",
 ]
 
 [[package]]
