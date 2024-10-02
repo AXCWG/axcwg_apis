@@ -1,20 +1,19 @@
-use std::{
-    fmt::format,
-    fs::{exists, File},
-    path::Path,
-};
+use std::
+    fs::exists
+;
 
 use actix_web::{
     get,
     http::header::ContentType,
     web::{self},
-    App, Error, HttpResponse, HttpServer, Responder, Result,
+    App, HttpResponse, HttpServer, Responder, Result,
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 struct Response {
+    id: i64,
     title: String,
     img: String,
 }
@@ -36,6 +35,7 @@ async fn webpage() -> HttpResponse {
 async fn get(info: web::Query<Info>) -> Result<impl Responder> {
     let conn = initdb().unwrap();
     let mut response = Response {
+        id: 0,
         img: String::new(),
         title: String::new(),
     };
@@ -43,6 +43,7 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
         .prepare(format!("select * from entries where id={}", info.id).as_str())
         .unwrap();
     match respponsedbtitle.query_row([], |row| {
+        response.id = row.get(0).unwrap();
         response.title = row.get(1).unwrap();
         response.img = row.get(2).unwrap();
         Ok(())
@@ -50,18 +51,20 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
         Ok(_) => (),
         Err(_) => {
             return Ok(web::Json(Response {
+                id: 0,
                 img: "dne".to_owned(),
                 title: "dne".to_owned(),
-            }))
+            }).customize().append_header(("access-control-allow-origin", "*")));
         }
     };
 
-    Ok(web::Json(response))
+    Ok(web::Json(response).customize().append_header(("access-control-allow-origin", "*")))
 }
 
 #[get("/api/latest")]
 async fn latest() -> Result<impl Responder> {
     let mut response = Response {
+        id: 0, 
         img: String::new(),
         title: String::new(),
     };
@@ -79,13 +82,14 @@ async fn latest() -> Result<impl Responder> {
         .unwrap();
     respponsedbtitle
         .query_row([], |row| {
+            response.id = latest;
             response.title = row.get(1).unwrap();
             response.img = row.get(2).unwrap();
             Ok(())
         })
         .unwrap();
 
-    Ok(web::Json(response))
+    Ok(web::Json(response).customize().append_header(("Access-Control-Allow-Origin", "*")).append_header(("Access-Control-Allow-Methods","POST, GET")).append_header(("X-Content-Type-Options", "nosniff")))
 }
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -95,6 +99,7 @@ async fn main() -> std::io::Result<()> {
             .service(webpage)
             .service(get)
             .service(latest)
+            
     })
     .bind(("127.0.0.1", 8080))?
     .run()
