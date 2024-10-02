@@ -1,9 +1,16 @@
+use std::{
+    fmt::format,
+    fs::{exists, File},
+    path::Path,
+};
+
 use actix_web::{
     get,
     http::header::ContentType,
     web::{self},
-    App, HttpResponse, HttpServer, Responder, Result,
+    App, Error, HttpResponse, HttpServer, Responder, Result,
 };
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -13,7 +20,7 @@ struct Response {
 }
 #[derive(Deserialize)]
 struct Info {
-    timecode: String,
+    id: i64,
 }
 #[get("/")]
 async fn index() -> impl Responder {
@@ -27,22 +34,56 @@ async fn webpage() -> HttpResponse {
 }
 #[get("/api/get")]
 async fn get(info: web::Query<Info>) -> Result<impl Responder> {
-    let response = Response {
-        img: format!("placeholder for img in timecode {}", info.timecode.as_str()),
-        title: format!(
-            "placeholder for title in timecode {}",
-            info.timecode.as_str()
-        ),
+    let conn = initdb().unwrap();
+    let mut response = Response {
+        img: String::new(),
+        title: String::new(),
+    };
+    let mut respponsedbtitle = conn
+        .prepare(format!("select * from entries where id={}", info.id).as_str())
+        .unwrap();
+    match respponsedbtitle.query_row([], |row| {
+        response.title = row.get(1).unwrap();
+        response.img = row.get(2).unwrap();
+        Ok(())
+    }) {
+        Ok(_) => (),
+        Err(_) => {
+            return Ok(web::Json(Response {
+                img: "dne".to_owned(),
+                title: "dne".to_owned(),
+            }))
+        }
     };
 
     Ok(web::Json(response))
 }
+
 #[get("/api/latest")]
 async fn latest() -> Result<impl Responder> {
-    let response = Response {
-        img: "latest".to_owned(),
-        title: "latest".to_owned(),
+    let mut response = Response {
+        img: String::new(),
+        title: String::new(),
     };
+    let conn = initdb().unwrap();
+    let mut respponsedb = conn.prepare("select max(id) from entries").unwrap();
+    let mut latest: i64 = i64::default();
+    respponsedb
+        .query_row([], |row| {
+            latest = row.get(0).unwrap();
+            Ok(())
+        })
+        .unwrap();
+    let mut respponsedbtitle = conn
+        .prepare(format!("select * from entries where id={}", latest).as_str())
+        .unwrap();
+    respponsedbtitle
+        .query_row([], |row| {
+            response.title = row.get(1).unwrap();
+            response.img = row.get(2).unwrap();
+            Ok(())
+        })
+        .unwrap();
 
     Ok(web::Json(response))
 }
@@ -59,4 +100,21 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-// async fn
+
+fn initdb() -> Result<Connection> {
+    match exists("./data.db").unwrap() {
+        true => {
+            let conn = Connection::open("./data.db").unwrap();
+            return Ok(conn);
+        }
+        false => {
+            let conn = Connection::open("./data.db").unwrap();
+            conn.execute(
+                "create table entries(id integer primary key autoincrement , title text, img text)",
+                (),
+            )
+            .unwrap();
+            return Ok(conn);
+        }
+    }
+}
