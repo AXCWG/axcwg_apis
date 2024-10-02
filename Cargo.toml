@@ -1,5 +1,5 @@
 [package]
-name = "AXCWG API"
+name = "AXCWG_API"
 version = "0.1.0"
 edition = "2024"
 
