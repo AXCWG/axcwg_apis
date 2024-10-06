@@ -3,7 +3,7 @@ use std::
 ;
 
 use actix_web::{
-    get, http::header::ContentType, web::{self}, App, HttpRequest, HttpResponse, HttpServer, Responder, Result
+    get, http::header::ContentType, post, web::{self}, App, HttpRequest, HttpResponse, HttpServer, Responder, Result
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -64,10 +64,32 @@ struct EhentaiIntake{
     gid: i64, 
     token: String, 
 }
-#[get("/api/ehentaiproxy")]
+#[get("/api/ehentaiproxyget")]
 async fn ehentai(params: web::Query<EhentaiIntake>) -> HttpResponse{
     let gid = params.gid; 
     let token = &params.token;
+    let proxy = reqwest::Proxy::http("http://127.0.0.1:7890").unwrap();
+    let client = reqwest::Client::new();
+    let res = client.post("https://e-hentai.org/api.php")
+    .body(format!("{{\"method\": \"gdata\",\"gidlist\": [[{},\"{}\"]],\"namespace\": 1}}", gid,token))
+    .header("Content-Type", "application/json")
+    .send()
+    .await.unwrap().text().await.unwrap();
+    println!("{}",res);
+    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
+
+
+}
+#[derive(Serialize, Deserialize)]
+struct EhentaiIntakePostMode{
+    method: String, 
+    gidlist: Vec<(i64, String)>, 
+    namespace: i64, 
+}
+#[post("/api/ehentaiproxypost")]
+async fn ehentaipost(params: web::Json<EhentaiIntakePostMode>) -> HttpResponse{
+    let gid = params.gidlist[0].0; 
+    let token = &params.gidlist[0].1;
     let proxy = reqwest::Proxy::http("http://127.0.0.1:7890").unwrap();
     let client = reqwest::Client::new();
     let res = client.post("https://e-hentai.org/api.php")
@@ -120,6 +142,7 @@ async fn main() -> std::io::Result<()> {
             .service(get)
             .service(latest)
             .service(ehentai)
+            .service(ehentaipost)
             
     })
     .bind(("0.0.0.0", 5766))?
