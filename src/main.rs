@@ -51,6 +51,7 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
             }).customize().append_header(("access-control-allow-origin", "*")));
         }
     };
+    println!("[{}] Now calling {}...",chrono::offset::Utc::now(), response.title);
     // return result
     Ok(web::Json(response).customize().append_header(("access-control-allow-origin", "*")))
 }
@@ -71,7 +72,7 @@ async fn ehentai(params: web::Query<EhentaiIntake>) -> HttpResponse{
     .header("Content-Type", "application/json")
     .send()
     .await.unwrap().text().await.unwrap();
-    println!("{}",res);
+    println!("[{}] Asked for {}",chrono::offset::Utc::now(), gid);
     HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
 
 
@@ -95,7 +96,7 @@ async fn ehentaipost(params: web::Json<EhentaiIntakePostMode>) -> HttpResponse{
     .header("Content-Type", "application/json")
     .send()
     .await.unwrap().text().await.unwrap();
-    println!("{}",res);
+    println!("[{}] Asked for {}",chrono::offset::Utc::now(),gid);
     HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
 
 
@@ -128,11 +129,12 @@ async fn latest() -> Result<impl Responder> {
             Ok(())
         })
         .unwrap();
-
+    println!("[{}] Asked for latest: {}", chrono::offset::Utc::now(), response.title);
     Ok(web::Json(response).customize().append_header(("Access-Control-Allow-Origin", "*")).append_header(("Access-Control-Allow-Methods","POST, GET")).append_header(("X-Content-Type-Options", "nosniff")))
 }
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("[{}] Starting...", chrono::offset::Utc::now());
     HttpServer::new(|| {
         App::new()
             .service(get)
@@ -149,10 +151,12 @@ async fn main() -> std::io::Result<()> {
 fn initdb() -> Result<Connection> {
     match exists("./data.db").unwrap() {
         true => {
+            println!("[{}] Opening db connection...", chrono::offset::Utc::now());
             let conn = Connection::open("./data.db").unwrap();
             return Ok(conn);
         }
         false => {
+            println!("[{}] No dbs found. Recreating one...", chrono::offset::Utc::now());
             let conn = Connection::open("./data.db").unwrap();
             conn.execute(
                 "create table entries(id integer primary key autoincrement , title text, img text)",

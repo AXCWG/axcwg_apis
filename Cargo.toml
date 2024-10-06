@@ -8,5 +8,5 @@ actix-web = "4.9.0"
 serde = { version = "1.0", features = ["derive"] }
 rusqlite = { version = "0.32.1", features = ["bundled"] }
 reqwest = "0.12.8"
-
+chrono = {version="0.4.38", features = ["clock"]}
 
