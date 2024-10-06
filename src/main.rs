@@ -48,12 +48,12 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
                 id: 0,
                 img: "dne".to_owned(),
                 title: "dne".to_owned(),
-            }).customize().append_header(("access-control-allow-origin", "*")));
+            }).customize().append_header(("Access-Control-Allow-Origin", "*")));
         }
     };
     println!("[{}] Now calling {}...",chrono::offset::Utc::now(), response.title);
     // return result
-    Ok(web::Json(response).customize().append_header(("access-control-allow-origin", "*")))
+    Ok(web::Json(response).customize().append_header(("Access-Control-Allow-Origin", "*")))
 }
 // params for get proxy. 
 #[derive(Deserialize)]
@@ -73,7 +73,7 @@ async fn ehentai(params: web::Query<EhentaiIntake>) -> HttpResponse{
     .send()
     .await.unwrap().text().await.unwrap();
     println!("[{}] Asked for {}",chrono::offset::Utc::now(), gid);
-    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
+    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("Access-Control-Allow-Origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
 
 
 }
@@ -97,7 +97,7 @@ async fn ehentaipost(params: web::Json<EhentaiIntakePostMode>) -> HttpResponse{
     .send()
     .await.unwrap().text().await.unwrap();
     println!("[{}] Asked for {}",chrono::offset::Utc::now(),gid);
-    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
+    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("Access-Control-Allow-Origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
 
 
 }
