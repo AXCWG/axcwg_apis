@@ -3,20 +3,19 @@ use std::
 ;
 
 use actix_web::{
-    get,
-    http::header::ContentType,
-    web::{self},
-    App, HttpResponse, HttpServer, Responder, Result,
+    get, http::header::ContentType, web::{self}, App, HttpRequest, HttpResponse, HttpServer, Responder, Result
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
+// Response used for returning comics. 
 #[derive(Serialize)]
 struct Response {
     id: i64,
     title: String,
     img: String,
 }
+// Parameter struct for /comic?get
 #[derive(Deserialize)]
 struct Info {
     id: i64,
@@ -60,6 +59,27 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
 
     Ok(web::Json(response).customize().append_header(("access-control-allow-origin", "*")))
 }
+#[derive(Deserialize)]
+struct EhentaiIntake{
+    gid: i64, 
+    token: String, 
+}
+#[get("/api/ehentaiproxy")]
+async fn ehentai(params: web::Query<EhentaiIntake>) -> HttpResponse{
+    let gid = params.gid; 
+    let token = &params.token;
+    let proxy = reqwest::Proxy::http("http://127.0.0.1:7890").unwrap();
+    let client = reqwest::Client::new();
+    let res = client.post("https://e-hentai.org/api.php")
+    .body(format!("{{\"method\": \"gdata\",\"gidlist\": [[{},\"{}\"]],\"namespace\": 1}}", gid,token))
+    .header("Content-Type", "application/json")
+    .send()
+    .await.unwrap().text().await.unwrap();
+    println!("{}",res);
+    HttpResponse::Ok().content_type(ContentType::plaintext()).insert_header(("access-control-allow-origin", "*")).insert_header(("Content-Type", "application/json")).body(res)
+
+
+}
 
 #[get("/api/latest")]
 async fn latest() -> Result<impl Responder> {
@@ -99,6 +119,7 @@ async fn main() -> std::io::Result<()> {
             .service(webpage)
             .service(get)
             .service(latest)
+            .service(ehentai)
             
     })
     .bind(("0.0.0.0", 5766))?
