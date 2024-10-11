@@ -1,5 +1,3 @@
-use std::fs::exists;
-
 use actix_web::{
     get,
     http::header::ContentType,
@@ -7,8 +5,14 @@ use actix_web::{
     web::{self},
     App, HttpResponse, HttpServer, Responder, Result,
 };
+
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use std::fs::exists;
+
+fn log(info: String){
+    println!("[{}] {info}", chrono::offset::Utc::now());
+}
 
 // Response used for returning comics.
 #[derive(Serialize)]
@@ -23,6 +27,24 @@ struct Info {
     id: i64,
 }
 
+// Reverse API for images. Was originally on the off-site VPS but going to abandon.
+#[get("/ehimages/{url:.*}")]
+async fn ehimages(path: web::Path<(String,)>) -> HttpResponse {
+    let (url,) = path.into_inner();
+    let proxy = reqwest::Proxy::all("http://localhost:7890").unwrap();
+    let client = reqwest::Client::builder().proxy(proxy).build().unwrap();
+    let url = format!("https://ehgt.org/{url}");
+    log(url.clone());
+    let res = client
+    .get(url)
+    .send()
+    .await
+    .unwrap()
+    .bytes()
+    .await
+    .unwrap();
+    HttpResponse::Ok().body(res)
+}
 // The API for getting comics
 #[get("/api/get")]
 async fn get(info: web::Query<Info>) -> Result<impl Responder> {
@@ -214,6 +236,13 @@ async fn latest() -> Result<impl Responder> {
         .insert_header(("Access-Control-Allow-Methods", "POST, GET"))
         .insert_header(("X-Content-Type-Options", "nosniff")))
 }
+
+#[get("/updater/v1/tt20")]
+async fn fauxupd() -> HttpResponse {
+    HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .body("{\"status\":true,\"latest\":\"0.7.0\",\"updateMessage\":\"TT20 0.7.0 has released, with more tick accelerators and bug fixes. Download it on Modrinth!\"}")
+}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("[{}] Starting...", chrono::offset::Utc::now());
@@ -226,6 +255,8 @@ async fn main() -> std::io::Result<()> {
             .service(ehentaipost)
             .service(ehentaipreflight)
             .service(ehentaipreflightpost)
+            .service(fauxupd)
+            .service(ehimages)
     })
     .bind(("0.0.0.0", 5766))?
     .run()
