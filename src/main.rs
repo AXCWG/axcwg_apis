@@ -15,12 +15,15 @@ use std::{
 
 fn log(info: &str) {
     let data = format!("[{}] {info}", chrono::offset::Utc::now());
-    File::create("./logs/latest.log").unwrap();
+    match exists("./logs/latest.log").unwrap(){
+        true=>(),
+        false=>{File::create("./logs/latest.log").unwrap();},
+    }
     let mut data_file = OpenOptions::new()
         .append(true)
         .open("./logs/latest.log")
         .unwrap();
-    data_file.write(data.as_bytes()).unwrap();
+    data_file.write(format!("{}\n", data).as_bytes()).unwrap();
     println!("{}", data);
 }
 
@@ -260,7 +263,10 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 fn checkloglatest() {
-    create_dir("./logs").unwrap();
+    match exists("./logs").unwrap() {
+        false => create_dir("./logs").unwrap(),
+        true => (),
+    }
     match exists("./logs/latest.log").unwrap() {
         true => {
             rename(
