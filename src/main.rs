@@ -87,7 +87,6 @@ async fn update_api(query: Option<web::Query<Updateapiquery>>) -> Result<impl Re
 
 // log system
 fn log(info: &str) {
-    
     let data = format!("[{}] {info}", chrono::offset::Utc::now());
     match exists("./logs/latest.log").unwrap() {
         true => (),
@@ -312,12 +311,6 @@ async fn latest() -> Result<impl Responder> {
         .insert_header(("X-Content-Type-Options", "nosniff")))
 }
 
-#[get("/updater/v1/tt20")]
-async fn fauxupd() -> HttpResponse {
-    HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body("{\"status\":true,\"latest\":\"0.7.0\",\"updateMessage\":\"TT20 0.7.0 has released, with more tick accelerators and bug fixes. Download it on Modrinth!\"}")
-}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     checkloglatest();
@@ -331,7 +324,6 @@ async fn main() -> std::io::Result<()> {
             .service(ehentaipost)
             .service(ehentaipreflight)
             .service(ehentaipreflightpost)
-            .service(fauxupd)
             .service(ehimages)
             .service(update_api)
     })
