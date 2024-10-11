@@ -13,11 +13,87 @@ use std::{
     io::Write,
 };
 
+// web query for update api: get specific version info...?
+#[derive(Deserialize)]
+struct Updateapiquery {
+    unixtimestamp: i64,
+}
+#[derive(Serialize)]
+struct UpdateAPIResponseJson {
+    version: String,
+    date: i64,
+    description: String,
+}
+
+// game update api
+#[get("/api/atrs/update")]
+async fn update_api(query: Option<web::Query<Updateapiquery>>) -> Result<impl Responder> {
+    if let Some(query) = query {
+        let mut response = UpdateAPIResponseJson {
+            version: String::new(),
+            date: 0,
+            description: String::new(),
+        };
+        let conn = initdb().unwrap();
+        let mut versionresponsefromdb = conn
+            .prepare(
+                format!(
+                    "select * from atrs_versions where date={}",
+                    query.unixtimestamp
+                )
+                .as_str(),
+            )
+            .unwrap();
+        versionresponsefromdb
+            .query_row([], |row| {
+                response.version = row.get(1).unwrap();
+                response.date = row.get(2).unwrap();
+                response.description = row.get(3).unwrap();
+                Ok(())
+            })
+            .unwrap();
+        log(&serde_json::to_string(&response).unwrap());
+        Ok(web::Json(response))
+    } else {
+        let mut response = UpdateAPIResponseJson {
+            version: String::new(),
+            date: 0,
+            description: String::new(),
+        };
+        let conn = initdb().unwrap();
+        let mut respponsedb = conn.prepare("select max(id) from atrs_versions").unwrap();
+        let mut latestentryid: i64 = i64::default();
+        respponsedb
+            .query_row([], |row| {
+                latestentryid = row.get(0).unwrap();
+                Ok(())
+            })
+            .unwrap();
+        let mut respponsedbtitle = conn
+            .prepare(format!("select * from atrs_versions where id={}", latestentryid).as_str())
+            .unwrap();
+        respponsedbtitle
+            .query_row([], |row| {
+                response.version = row.get(1).unwrap();
+                response.date = row.get(2).unwrap();
+                response.description = row.get(3).unwrap();
+                Ok(())
+            })
+            .unwrap();
+        log(&serde_json::to_string(&response).unwrap());
+        Ok(web::Json(response))
+    }
+}
+
+// log system
 fn log(info: &str) {
+    
     let data = format!("[{}] {info}", chrono::offset::Utc::now());
-    match exists("./logs/latest.log").unwrap(){
-        true=>(),
-        false=>{File::create("./logs/latest.log").unwrap();},
+    match exists("./logs/latest.log").unwrap() {
+        true => (),
+        false => {
+            File::create("./logs/latest.log").unwrap();
+        }
     }
     let mut data_file = OpenOptions::new()
         .append(true)
@@ -257,6 +333,7 @@ async fn main() -> std::io::Result<()> {
             .service(ehentaipreflightpost)
             .service(fauxupd)
             .service(ehimages)
+            .service(update_api)
     })
     .bind(("0.0.0.0", 5766))?
     .run()
