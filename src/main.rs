@@ -8,10 +8,20 @@ use actix_web::{
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::fs::exists;
+use std::{
+    fs::{exists, rename, File, OpenOptions},
+    io::Write,
+};
 
-fn log(info: String){
-    println!("[{}] {info}", chrono::offset::Utc::now());
+fn log(info: &str) {
+    let data = format!("[{}] {info}", chrono::offset::Utc::now());
+    File::create("./logs/latest.log").unwrap();
+    let mut data_file = OpenOptions::new()
+        .append(true)
+        .open("./logs/latest.log")
+        .unwrap();
+    data_file.write(data.as_bytes()).unwrap();
+    println!("{}", data);
 }
 
 // Response used for returning comics.
@@ -34,15 +44,8 @@ async fn ehimages(path: web::Path<(String,)>) -> HttpResponse {
     let proxy = reqwest::Proxy::all("http://localhost:7890").unwrap();
     let client = reqwest::Client::builder().proxy(proxy).build().unwrap();
     let url = format!("https://ehgt.org/{url}");
-    log(url.clone());
-    let res = client
-    .get(url)
-    .send()
-    .await
-    .unwrap()
-    .bytes()
-    .await
-    .unwrap();
+    log(url.clone().as_str());
+    let res = client.get(url).send().await.unwrap().bytes().await.unwrap();
     HttpResponse::Ok().body(res)
 }
 // The API for getting comics
@@ -77,11 +80,7 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
             .insert_header(("Access-Control-Allow-Origin", "*")));
         }
     };
-    println!(
-        "[{}] Now calling {}...",
-        chrono::offset::Utc::now(),
-        response.title
-    );
+    log(format!("Now calling {}...", response.title).as_str());
     // return result
     Ok(web::Json(response)
         .customize()
@@ -125,7 +124,7 @@ async fn ehentai(paramsoptional: Option<web::Query<EhentaiIntake>>) -> HttpRespo
             .text()
             .await
             .unwrap();
-        println!("[{}] Asked for {}", chrono::offset::Utc::now(), gid);
+        log(format!("Asked for {}", gid).as_str());
         HttpResponse::Ok()
             .content_type(ContentType::plaintext())
             .insert_header(("Access-Control-Allow-Origin", "*"))
@@ -134,7 +133,7 @@ async fn ehentai(paramsoptional: Option<web::Query<EhentaiIntake>>) -> HttpRespo
             .insert_header(("Content-Type", "application/json"))
             .body(res)
     } else {
-        println!("[{}] Asked for null", chrono::offset::Utc::now());
+        log("Asked for null");
         HttpResponse::Ok()
             .insert_header(("Access-Control-Allow-Origin", "*"))
             .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
@@ -159,6 +158,7 @@ async fn ehentaipreflightpost() -> HttpResponse {
         .insert_header(("Origin", "*"))
         .body(())
 }
+
 #[post("/api/ehentaiproxypost")]
 async fn ehentaipost(paramsoptional: Option<web::Json<EhentaiIntakePostMode>>) -> HttpResponse {
     if let Some(params) = paramsoptional {
@@ -179,7 +179,7 @@ async fn ehentaipost(paramsoptional: Option<web::Json<EhentaiIntakePostMode>>) -
             .text()
             .await
             .unwrap();
-        println!("[{}] Asked for {}", chrono::offset::Utc::now(), gid);
+        log(format!("Asked for {}", gid).as_str());
         HttpResponse::Ok()
             .content_type(ContentType::plaintext())
             .insert_header(("Access-Control-Allow-Origin", "*"))
@@ -225,11 +225,7 @@ async fn latest() -> Result<impl Responder> {
             Ok(())
         })
         .unwrap();
-    println!(
-        "[{}] Asked for latest: {}",
-        chrono::offset::Utc::now(),
-        response.title
-    );
+    log(format!("Asked for latest: {}", response.title).as_str());
     Ok(web::Json(response)
         .customize()
         .insert_header(("Access-Control-Allow-Origin", "*"))
@@ -245,7 +241,8 @@ async fn fauxupd() -> HttpResponse {
 }
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("[{}] Starting...", chrono::offset::Utc::now());
+    checkloglatest();
+    log("Starting...");
     HttpServer::new(|| {
         App::new()
             // .wrap(Cors::default().allowed_origin("*"))
@@ -262,19 +259,27 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-
+fn checkloglatest() {
+    match exists("./logs/latest.log").unwrap() {
+        true => {
+            rename(
+                "./logs/latest.log",
+                format!("./logs/{}.log", chrono::offset::Utc::now().timestamp()),
+            )
+            .unwrap();
+        }
+        _ => (),
+    }
+}
 fn initdb() -> Result<Connection> {
     match exists("./data.db").unwrap() {
         true => {
-            println!("[{}] Opening db connection...", chrono::offset::Utc::now());
+            log("Opening db connection...");
             let conn = Connection::open("./data.db").unwrap();
             return Ok(conn);
         }
         false => {
-            println!(
-                "[{}] No dbs found. Recreating one...",
-                chrono::offset::Utc::now()
-            );
+            log("No dbs found. Recreating one...");
             let conn = Connection::open("./data.db").unwrap();
             conn.execute(
                 "create table entries(id integer primary key autoincrement , title text, img text)",
