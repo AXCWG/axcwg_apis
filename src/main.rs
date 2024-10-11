@@ -9,7 +9,7 @@ use actix_web::{
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::{
-    fs::{exists, rename, File, OpenOptions},
+    fs::{create_dir, exists, rename, File, OpenOptions},
     io::Write,
 };
 
@@ -260,6 +260,7 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 fn checkloglatest() {
+    create_dir("./logs").unwrap();
     match exists("./logs/latest.log").unwrap() {
         true => {
             rename(
