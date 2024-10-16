@@ -25,6 +25,18 @@ struct UpdateAPIResponseJson {
     description: String,
 }
 
+// For map
+#[derive(Deserialize)]
+struct Map{
+    // TODO
+}
+
+// MSA 
+async fn map_api(query: Option<web::Query<Map>>)->Result<impl Responder>{
+    // TODO
+    Ok(web::Json(""))
+}
+
 // game update api
 #[get("/api/atrs/update")]
 async fn update_api(query: Option<web::Query<Updateapiquery>>) -> Result<impl Responder> {
