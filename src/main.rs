@@ -6,13 +6,53 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder, Result,
 };
 
+use mc_rcon::RconClient;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{create_dir, exists, rename, File, OpenOptions},
     io::Write,
 };
+use utoipa::openapi::{response, security::Http};
 
+// Query struct for Rcon Client
+// God damn there's more and more stuffs stuffing into this poor little, originated-for-image-surving API, no?
+#[derive(Deserialize)]
+struct RconClientQuery {
+    ip: String,
+    password: Option<String>,
+    command: String,
+}
+
+#[get("/api/rcon")]
+async fn rcon(query: Option<web::Query<RconClientQuery>>) -> HttpResponse {
+    
+    if let Some(query) = query {
+            let client = RconClient::connect(query.ip.clone()).unwrap();
+            if let Some(password) = &query.password{
+                client.log_in(&password).unwrap();
+                let resp = client.send_command(&query.command).unwrap();
+                log(&resp);
+                return HttpResponse::Ok()
+                .content_type(ContentType::plaintext())
+                .body(resp)
+            }else{
+                let resp = client.send_command(&query.command).unwrap();
+                log(&resp);
+                return HttpResponse::Ok()
+                .content_type(ContentType::plaintext())
+                .body(client.send_command(&query.command).unwrap())
+            }
+
+        
+
+        
+    } else {
+        HttpResponse::Ok()
+            .content_type(ContentType::html())
+            .body("<span>No input specified. </span>")
+    }
+}
 // web query for update api: get specific version info...?
 #[derive(Deserialize)]
 struct Updateapiquery {
@@ -27,12 +67,12 @@ struct UpdateAPIResponseJson {
 
 // For map
 #[derive(Deserialize)]
-struct Map{
+struct Map {
     // TODO
 }
 
-// MSA 
-async fn map_api(query: Option<web::Query<Map>>)->Result<impl Responder>{
+// MSA
+async fn map_api(query: Option<web::Query<Map>>) -> Result<impl Responder> {
     // TODO
     Ok(web::Json(""))
 }
@@ -338,6 +378,7 @@ async fn main() -> std::io::Result<()> {
             .service(ehentaipreflightpost)
             .service(ehimages)
             .service(update_api)
+            .service(rcon)
     })
     .bind(("0.0.0.0", 5766))?
     .run()
