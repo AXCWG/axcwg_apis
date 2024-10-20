@@ -13,10 +13,9 @@ use std::{
     fs::{create_dir, exists, rename, File, OpenOptions},
     io::Write,
 };
-use utoipa::openapi::{response, security::Http};
 
 // Query struct for Rcon Client
-// God damn there's more and more stuffs stuffing into this poor little, originated-for-image-surving API, no?
+// God damn there's more and more stuffs stuffing into this poor little, originated-for-image-surving API, no? Thank god I decided to write it in Rust. 
 #[derive(Deserialize)]
 struct RconClientQuery {
     ip: String,
@@ -72,10 +71,10 @@ struct Map {
 }
 
 // MSA
-async fn map_api(query: Option<web::Query<Map>>) -> Result<impl Responder> {
-    // TODO
-    Ok(web::Json(""))
-}
+// async fn map_api(query: Option<web::Query<Map>>) -> Result<impl Responder> {
+//     // TODO
+//     Ok(web::Json(""))
+// }
 
 // game update api
 #[get("/api/atrs/update")]
