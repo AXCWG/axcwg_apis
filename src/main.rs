@@ -34,12 +34,20 @@ async fn rcon(query: Option<web::Query<RconClientQuery>>) -> HttpResponse {
                 log(&resp);
                 return HttpResponse::Ok()
                 .content_type(ContentType::plaintext())
+                .insert_header(("Access-Control-Request-Headers", "*"))
+                .insert_header(("Access-Control-Allow-Origin", "*"))
+                .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
+                .insert_header(("X-Content-Type-Options", "nosniff"))
                 .body(resp)
             }else{
                 let resp = client.send_command(&query.command).unwrap();
                 log(&resp);
                 return HttpResponse::Ok()
                 .content_type(ContentType::plaintext())
+                .insert_header(("Access-Control-Request-Headers", "*"))
+                .insert_header(("Access-Control-Allow-Origin", "*"))
+                .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
+                .insert_header(("X-Content-Type-Options", "nosniff"))
                 .body(client.send_command(&query.command).unwrap())
             }
 
@@ -49,6 +57,10 @@ async fn rcon(query: Option<web::Query<RconClientQuery>>) -> HttpResponse {
     } else {
         HttpResponse::Ok()
             .content_type(ContentType::html())
+            .insert_header(("Access-Control-Request-Headers", "*"))
+            .insert_header(("Access-Control-Allow-Origin", "*"))
+            .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
+            .insert_header(("X-Content-Type-Options", "nosniff"))
             .body("<span>No input specified. </span>")
     }
 }
