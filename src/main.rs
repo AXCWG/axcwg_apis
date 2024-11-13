@@ -15,7 +15,7 @@ use std::{
 };
 
 // Query struct for Rcon Client
-// God damn there's more and more stuffs stuffing into this poor little, originated-for-image-surving API, no? Thank god I decided to write it in Rust. 
+// God damn there's more and more stuff stuffing into this poor little, originated-for-image-surving API, no? Thank god I decided to write it in Rust.
 #[derive(Deserialize)]
 struct RconClientQuery {
     ip: String,
@@ -25,35 +25,30 @@ struct RconClientQuery {
 
 #[get("/api/rcon")]
 async fn rcon(query: Option<web::Query<RconClientQuery>>) -> HttpResponse {
-    
     if let Some(query) = query {
-            let client = RconClient::connect(query.ip.clone()).unwrap();
-            if let Some(password) = &query.password{
-                client.log_in(&password).unwrap();
-                let resp = client.send_command(&query.command).unwrap();
-                log(&resp);
-                return HttpResponse::Ok()
+        let client = RconClient::connect(query.ip.clone()).unwrap();
+        if let Some(password) = &query.password {
+            client.log_in(&password).unwrap();
+            let resp = client.send_command(&query.command).unwrap();
+            log(&resp);
+            HttpResponse::Ok()
                 .content_type(ContentType::plaintext())
                 .insert_header(("Access-Control-Request-Headers", "*"))
                 .insert_header(("Access-Control-Allow-Origin", "*"))
                 .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
                 .insert_header(("X-Content-Type-Options", "nosniff"))
                 .body(resp)
-            }else{
-                let resp = client.send_command(&query.command).unwrap();
-                log(&resp);
-                return HttpResponse::Ok()
+        } else {
+            let resp = client.send_command(&query.command).unwrap();
+            log(&resp);
+            return HttpResponse::Ok()
                 .content_type(ContentType::plaintext())
                 .insert_header(("Access-Control-Request-Headers", "*"))
                 .insert_header(("Access-Control-Allow-Origin", "*"))
                 .insert_header(("Access-Control-Allow-Methods", "GET, POST"))
                 .insert_header(("X-Content-Type-Options", "nosniff"))
-                .body(client.send_command(&query.command).unwrap())
-            }
-
-        
-
-        
+                .body(client.send_command(&query.command).unwrap());
+        }
     } else {
         HttpResponse::Ok()
             .content_type(ContentType::html())
@@ -104,7 +99,7 @@ async fn update_api(query: Option<web::Query<Updateapiquery>>) -> Result<impl Re
                     "select * from atrs_versions where date={}",
                     query.unixtimestamp
                 )
-                .as_str(),
+                    .as_str(),
             )
             .unwrap();
         versionresponsefromdb
@@ -181,7 +176,7 @@ struct Info {
 // Reverse API for images. Was originally on the off-site VPS but going to abandon.
 #[get("/ehimages/{url:.*}")]
 async fn ehimages(path: web::Path<(String,)>) -> HttpResponse {
-    let (url,) = path.into_inner();
+    let (url, ) = path.into_inner();
     let proxy = reqwest::Proxy::all("http://localhost:7890").unwrap();
     let client = reqwest::Client::builder().proxy(proxy).build().unwrap();
     let url = format!("https://ehgt.org/{url}");
@@ -217,8 +212,8 @@ async fn get(info: web::Query<Info>) -> Result<impl Responder> {
                 img: "dne".to_owned(),
                 title: "dne".to_owned(),
             })
-            .customize()
-            .insert_header(("Access-Control-Allow-Origin", "*")));
+                .customize()
+                .insert_header(("Access-Control-Allow-Origin", "*")));
         }
     };
     log(format!("Now calling {}...", response.title).as_str());
@@ -391,9 +386,9 @@ async fn main() -> std::io::Result<()> {
             .service(update_api)
             .service(rcon)
     })
-    .bind(("0.0.0.0", 5766))?
-    .run()
-    .await
+        .bind(("0.0.0.0", 5766))?
+        .run()
+        .await
 }
 fn checkloglatest() {
     match exists("./logs").unwrap() {
@@ -406,7 +401,7 @@ fn checkloglatest() {
                 "./logs/latest.log",
                 format!("./logs/{}.log", chrono::offset::Utc::now().timestamp()),
             )
-            .unwrap();
+                .unwrap();
         }
         _ => (),
     }
@@ -425,7 +420,7 @@ fn initdb() -> Result<Connection> {
                 "create table entries(id integer primary key autoincrement , title text, img text)",
                 (),
             )
-            .unwrap();
+                .unwrap();
             return Ok(conn);
         }
     }
